@@ -14,6 +14,8 @@ class Changer():
     Q_LEN = N * 4
 
     CHANNEL = 1 # チャンネル数（1固定）
+    
+    samplingCount = 0
 
     #リングQの定義。inQはマイク入力、outQは出力
     inQ = np.zeros(Q_LEN)
@@ -36,9 +38,9 @@ class Changer():
             callback=self.audioCallback)
 
         aniInQ = FuncAnimation(
-            self.figInVoice,
-            self.plotInVoice,
-            init_func=self.initInVoice,
+            self.figInQ,
+            self.plotInQ,
+            init_func=self.initInQGraph,
             interval=self.T_fft,
             blit=True)
 
@@ -49,14 +51,14 @@ class Changer():
         self.lineInQ.set_ydata([np.nan] * self.N)
         return self.lineInQ,
 
-    def plotInQGraph(self, i):
+    def plotInQ(self, i):
         """ボイス波形を時間領域のグラフをプロット"""
-        self.lineInQ.ste_ydata(self.inQ[self.inQR : self.inQR+self.N])
+        self.lineInQ.set_ydata(self.inQ[self.inQF : self.inQF+self.N])
         return self.lineInQ,
 
     def convertVoiceToSpects(self,convertData):
         """入ってきたマイクのデータを周波数解析して、返す"""
-        print("convert input voice to spectacles by fft\n")
+        print("convert input voice to spectacles by fft")
         spects = np.fft.fft(convertData)
         return spects
 
@@ -72,7 +74,7 @@ class Changer():
 
     def audioCallback2(self):
         """T_fftごとに呼ばれるコールバック関数"""
-        print("callback by a fft\n")
+        print("callback by a fft")
         #変換するデータの取り出し
         convertData = self.inQ[self.inQR+1 : self.inQR+self.N]
         self.inQR = (self.inQR + self.N) % self.Q_LEN
@@ -86,19 +88,26 @@ class Changer():
 
     def audioCallback(self, indata, outdata, frames, time, status):
         """サンプリングごとに呼ばれるコールバック関数"""
+        self.samplingCount += 1
+        print(self.samplingCount)
         if status:
             print(status, file=sys.stderr) #error status
+        print(indata)
+        print(len(indata))
+        self.stream.stop()
         #リングQに追加
-        self.inQ[self.inQF] = indata
-        self.inQF = (self.inQF + 1) % self.Q_LEN
+#         self.inQ[self.inQF] = indata[0]
+#         self.inQF = (self.inQF + 1) % self.Q_LEN
         #T_fftのタイミング=T_sが一定回数のタイミングで、audioCallback2を呼び出す
-        if int(time % self.T_fft) == 0:
-            threadConvert = threading.Thread(target=self.audioCallback2)
-            threadConvert.start()
+#         if self.samplingCount == self.N:
+#             threadConvert = threading.Thread(target=self.audioCallback2)
+#             threadConvert.start()
+#             self.samplingCount = 0
         #リングQから取り出し
 #         outdata = self.outQ[self.outQR + 1]
 #         self.outQR = (self.outQR + 1) % self.Q_LEN
         outdata = indata
+        
 
 if __name__ == '__main__':
     Changer()
