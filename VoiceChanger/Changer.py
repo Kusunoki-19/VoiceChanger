@@ -14,7 +14,7 @@ class Changer():
     Q_LEN = N * 4
 
     CHANNEL = 1 # チャンネル数（1固定）
-    
+
     samplingCount = 0
 
     #リングQの定義。inQはマイク入力、outQは出力
@@ -92,22 +92,22 @@ class Changer():
         print(self.samplingCount)
         if status:
             print(status, file=sys.stderr) #error status
-        print(indata)
-        print(len(indata))
-        self.stream.stop()
+#         print(indata)
+#         print(len(indata))
+#         self.stream.stop()
         #リングQに追加
-#         self.inQ[self.inQF] = indata[0]
-#         self.inQF = (self.inQF + 1) % self.Q_LEN
+        self.inQ[self.inQF] = indata[0]
+        self.inQF = (self.inQF + 1) % self.Q_LEN
         #T_fftのタイミング=T_sが一定回数のタイミングで、audioCallback2を呼び出す
-#         if self.samplingCount == self.N:
-#             threadConvert = threading.Thread(target=self.audioCallback2)
-#             threadConvert.start()
-#             self.samplingCount = 0
+        if self.samplingCount == self.N:
+            threadConvert = threading.Thread(target=self.audioCallback2)
+            threadConvert.start()
+            self.samplingCount = 0
         #リングQから取り出し
 #         outdata = self.outQ[self.outQR + 1]
 #         self.outQR = (self.outQR + 1) % self.Q_LEN
         outdata = indata
-        
+
 
 if __name__ == '__main__':
     Changer()
