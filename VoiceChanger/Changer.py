@@ -9,7 +9,7 @@ class Changer():
 
     T_s = 1.0/4000 # サンプリング周期[s]
     F_s = 1 / T_s # サンプリング周波数[s^-1]
-    N = 4000 #fftごとのデータ数
+    N = 112*10 #fftごとのデータ数
     T_fft = T_s * N #fft を行う周期[s]
     Q_LEN = N * 4
 
@@ -18,17 +18,20 @@ class Changer():
     samplingCount = 0
 
     #リングQの定義。inQはマイク入力、outQは出力
-    inQ = np.zeros(Q_LEN)
-    outQ = np.zeros(Q_LEN)
+    inQ = np.zeros((Q_LEN, 1))
+    outQ = np.zeros((Q_LEN, 1))
     #各キューのfrontとrear -> F と R
     inQF = 2 * N
     inQR = 0
     outQF = N
     outQR = 0
+    
+    convertData = np.zeros((N, 1))
+    convertedData = np.zeros((N, 1))
 
     figInQ , axInQ = plt.subplots()
     x = np.arange(0, N , 1)
-    lineInQ, = axInQ.plot(x, np.zeros(N))
+    lineInQ, = axInQ.plot(x, np.zeros((N,1)))
 
     def __init__(self):
 
@@ -52,8 +55,11 @@ class Changer():
         return self.lineInQ,
 
     def plotInQ(self, i):
-        """ボイス波形を時間領域のグラフをプロット"""
-        self.lineInQ.set_ydata(self.inQ[self.inQF : self.inQF+self.N])
+        """ボイス波形を時間領域のグラフをプロ ット"""
+        line = np.zeros((self.N,1))
+        for i in range(self.N):
+            line[i] = self.inQ[(self.inQF + i)%self.Q_LEN]
+        self.lineInQ.set_ydata(line)
         return self.lineInQ,
 
     def convertVoiceToSpects(self,convertData):
@@ -76,37 +82,49 @@ class Changer():
         """T_fftごとに呼ばれるコールバック関数"""
         print("callback by a fft")
         #変換するデータの取り出し
-        convertData = self.inQ[self.inQR+1 : self.inQR+self.N]
+        for i in range(self.N):
+            self.convertData[i] = self.inQ[(self.inQR + 1 + i)%self.Q_LEN]
         self.inQR = (self.inQR + self.N) % self.Q_LEN
-        #データの変換
+#         #データの変換
 #         spects = self.convertVoiceToSpects(convertData)
 #         convertedSpects = self.filterSpects(spects)
 #         convertedData = self.convertSpectsToVoice(convertedSpects)
-        #変換したデータを出力Qに追加
-#         self.outQ[self.outQF+1 : self.outQF+self.N] = convertedData[:]
-#         self.outQF = (self.outQF + self.N) % self.Q_LEN
+#         #変換したデータを出力Qに追加
+#         for i, _ in enumerate(convertedData):
+#             self.outQ[(self.outQF+i)%self.Q_LEN]  = convertedData[i]
+#         self.outQF = (self.outQF + len(convertedData)) % self.Q_LEN
 
     def audioCallback(self, indata, outdata, frames, time, status):
-        """サンプリングごとに呼ばれるコールバック関数"""
-        self.samplingCount += 1
-        print(self.samplingCount)
+        """複数のサンプリングごと呼ばれるコールバック関数"""
+        """
+        indata : np.array, サンプリングの結果を行ベクトルとして保持
+        outdata : 出力に使う行ベクトル, indata と同じ長さと思われる
+        """
+#         print(indata)
+#         print(indata.shape)
+#         print(self.inQ.shape)
+#         self.stream.stop()
+
+        sampleLen = indata.shape[0] #行列の横の長さ
+        self.samplingCount += sampleLen
         if status:
             print(status, file=sys.stderr) #error status
-#         print(indata)
-#         print(len(indata))
-#         self.stream.stop()
         #リングQに追加
-        self.inQ[self.inQF] = indata[0]
-        self.inQF = (self.inQF + 1) % self.Q_LEN
+        for i, _ in enumerate(indata):
+            self.inQ[(self.inQF + i)%self.Q_LEN] = indata[i]
+        self.inQF = (self.inQF + sampleLen) % self.Q_LEN
         #T_fftのタイミング=T_sが一定回数のタイミングで、audioCallback2を呼び出す
-        if self.samplingCount == self.N:
+        if self.samplingCount >= self.N:
             threadConvert = threading.Thread(target=self.audioCallback2)
             threadConvert.start()
-            self.samplingCount = 0
+            self.samplingCount = self.samplingCount % self.N
         #リングQから取り出し
-#         outdata = self.outQ[self.outQR + 1]
-#         self.outQR = (self.outQR + 1) % self.Q_LEN
-        outdata = indata
+        for i, _ in enumerate(indata):
+            outdata[i] = self.outQ[(self.outQF+i)%self.Q_LEN]
+        self.outQR = (self.outQR +  sampleLen) % self.Q_LEN
+        
+        print(self.samplingCount)
+
 
 
 if __name__ == '__main__':
