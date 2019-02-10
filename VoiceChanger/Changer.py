@@ -25,13 +25,11 @@ class Changer():
     inQR = 0
     outQF = N
     outQR = 0
-    
-    convertData = np.zeros((N, 1))
-    convertedData = np.zeros((N, 1))
 
+    IN_Q_GRAPH_NUM = 112
     figInQ , axInQ = plt.subplots()
-    x = np.arange(0, N , 1)
-    lineInQ, = axInQ.plot(x, np.zeros((N,1)))
+    x = np.arange(0, IN_Q_GRAPH_NUM , 1)
+    lineInQ, = axInQ.plot(x, np.zeros((IN_Q_GRAPH_NUM,1)))
 
     def __init__(self):
 
@@ -44,20 +42,24 @@ class Changer():
             self.figInQ,
             self.plotInQ,
             init_func=self.initInQGraph,
-            interval=self.T_fft,
+            interval=self.T_s,
             blit=True)
 
         with self.stream:
             plt.show()
 
     def initInQGraph(self):
-        self.lineInQ.set_ydata([np.nan] * self.N)
+        plt.ylim(-1,1)
+        plt.ylabel("digital value[-]")
+        plt.xlabel("data index[-]")
+        self.lineInQ.set_ydata([np.nan] * self.IN_Q_GRAPH_NUM)
         return self.lineInQ,
 
     def plotInQ(self, i):
         """ボイス波形を時間領域のグラフをプロ ット"""
-        line = np.zeros((self.N,1))
-        for i in range(self.N):
+        line = np.zeros((self.IN_Q_GRAPH_NUM,1))
+        #inQから値の取り出し
+        for i in range(self.IN_Q_GRAPH_NUM):
             line[i] = self.inQ[(self.inQF + i)%self.Q_LEN]
         self.lineInQ.set_ydata(line)
         return self.lineInQ,
@@ -82,8 +84,9 @@ class Changer():
         """T_fftごとに呼ばれるコールバック関数"""
         print("callback by a fft")
         #変換するデータの取り出し
+        convertData = np.zeros((self.N, 1))
         for i in range(self.N):
-            self.convertData[i] = self.inQ[(self.inQR + 1 + i)%self.Q_LEN]
+            convertData[i] = self.inQ[(self.inQR + 1 + i)%self.Q_LEN]
         self.inQR = (self.inQR + self.N) % self.Q_LEN
 #         #データの変換
 #         spects = self.convertVoiceToSpects(convertData)
@@ -122,7 +125,7 @@ class Changer():
         for i, _ in enumerate(indata):
             outdata[i] = self.outQ[(self.outQF+i)%self.Q_LEN]
         self.outQR = (self.outQR +  sampleLen) % self.Q_LEN
-        
+
         print(self.samplingCount)
 
 
