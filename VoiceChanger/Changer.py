@@ -27,10 +27,10 @@ class Changer():
     outQR = 0
 
     IN_Q_GRAPH_NUM = 112
-    figInQ , axInQ = plt.subplots()
+    fig , ax = plt.subplots(2,2,figsize=(10,5))
     x = np.arange(0, IN_Q_GRAPH_NUM , 1)
-    lineInQ, = axInQ.plot(x, np.zeros((IN_Q_GRAPH_NUM,1)))
-
+    lineInQ, = ax[0,0].plot(x, np.zeros((IN_Q_GRAPH_NUM,1)))
+    
     def __init__(self):
 
         self.stream = sd.Stream(
@@ -38,8 +38,8 @@ class Changer():
             samplerate=self.F_s,
             callback=self.audioCallback)
 
-        aniInQ = FuncAnimation(
-            self.figInQ,
+        self.aniInQ = FuncAnimation(
+            self.fig,
             self.plotInQ,
             init_func=self.initInQGraph,
             interval=self.T_s,
@@ -49,13 +49,14 @@ class Changer():
             plt.show()
 
     def initInQGraph(self):
-        self.axInQ.set_ylim(-1,1)
-        self.axInQ.set_ylabel("digital value[-]")
-        self.axInQ.set_xlabel("data index[-]")
+        self.ax[0,0].set_title("Input Voice Wave")
+        self.ax[0,0].set_ylim(-1,1)
+        self.ax[0,0].set_ylabel("digital value[-]")
+        self.ax[0,0].set_xlabel("data index[-]")
         self.lineInQ.set_ydata([np.nan] * self.IN_Q_GRAPH_NUM)
         return self.lineInQ,
 
-    def plotInQ(self, i):
+    def plotInQ(self, count):
         """ボイス波形を時間領域のグラフをプロ ット"""
         line = np.zeros((self.IN_Q_GRAPH_NUM,1))
         #inQから値の取り出し
