@@ -49,9 +49,9 @@ class Changer():
             plt.show()
 
     def initInQGraph(self):
-        plt.ylim(-1,1)
-        plt.ylabel("digital value[-]")
-        plt.xlabel("data index[-]")
+        self.axInQ.set_ylim(-1,1)
+        self.axInQ.set_ylabel("digital value[-]")
+        self.axInQ.set_xlabel("data index[-]")
         self.lineInQ.set_ydata([np.nan] * self.IN_Q_GRAPH_NUM)
         return self.lineInQ,
 
@@ -77,9 +77,9 @@ class Changer():
 
     def convertSpectsToVoice(self,convertedSpects):
         """周波数領域で変換された波形を時間領域に変換する"""
-        convertedData = 1 #TODO 周波数領域のspectaclesから時間領域の波形に変換する
+        convertedData = np.fft.ifft(convertedSpects) #TODO 周波数領域のspectaclesから時間領域の波形に変換する
         return convertedData
-
+ 
     def audioCallback2(self):
         """T_fftごとに呼ばれるコールバック関数"""
         print("callback by a fft")
@@ -103,11 +103,6 @@ class Changer():
         indata : np.array, サンプリングの結果を行ベクトルとして保持
         outdata : 出力に使う行ベクトル, indata と同じ長さと思われる
         """
-#         print(indata)
-#         print(indata.shape)
-#         print(self.inQ.shape)
-#         self.stream.stop()
-
         sampleLen = indata.shape[0] #行列の横の長さ
         self.samplingCount += sampleLen
         if status:
