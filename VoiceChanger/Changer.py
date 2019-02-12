@@ -6,11 +6,11 @@ import sounddevice as sd
 
 class Changer():
     #サンプリング周期[s]
-    T_s = 1.0/4000
+    T_s = 1.0/5000
     #サンプリング周波数[s^-1]
     F_s = 1 / T_s
     #fftごとのデータ数
-    N = 112*3
+    N = 144*2*(10**1)
     #fftを行う周期[s]
     T_fft = T_s * N
     #チャンネル数（1固定）
@@ -34,6 +34,8 @@ class Changer():
     plt.subplots_adjust(wspace=0.6, hspace=1) # 余白を設定
     wave_x = np.arange(0, WAVE_GRAPH_VAL_NUM , 1)
     freq_x = np.fft.fftfreq(N, d=T_s)
+    inFreq = np.fft.fft(np.zeros((N, 1)))
+    outFreq = np.fft.fft(np.zeros((N, 1)))
     axs = [] #各グラフ
     axs.append(fig.add_subplot(221 + 0)) #左上
     axs.append(fig.add_subplot(221 + 2)) #左下
@@ -161,7 +163,7 @@ class Changer():
             outdata[i] = self.outQ[(self.outQR+i)%self.Q_LEN]
         self.outQR = (self.outQR +  sampleLen) % self.Q_LEN
 
-        print("sompling count : %d"%(self.samplingCount))
+        print("sompling : %d"%(self.samplingCount))
 
 
 
