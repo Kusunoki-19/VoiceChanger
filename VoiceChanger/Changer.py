@@ -30,7 +30,7 @@ class Changer():
     #グラフに関する変数
     WAVE_GRAPH_VAL_NUM = 112
     FREQ_RANGE = {'min':0, 'max':4000, 'range':4000}
-    
+
     fig = plt.figure()
     plt.subplots_adjust(wspace=0.6, hspace=1) # 余白を設定
     wave_x = np.arange(0, WAVE_GRAPH_VAL_NUM , 1)
@@ -40,7 +40,7 @@ class Changer():
     axs.append(fig.add_subplot(221 + 2)) #左下
     axs.append(fig.add_subplot(221 + 1)) #右上
     axs.append(fig.add_subplot(221 + 3)) #右下
-         
+
     lines = [] #各ラインオブジェクト
     for i in [0,1]:
         lines.append(
@@ -48,7 +48,7 @@ class Changer():
     for i in [2,3]:
         lines.append(
             axs[i].plot(freq_x,[np.nan] * len(freq_x))[0])
-    
+
     samplingCount = 0
 
     def __init__(self):
@@ -67,7 +67,7 @@ class Changer():
 
         with self.stream:
             plt.show()
-        
+
     def initGraphs(self):
         #個別グラフ設定
         self.axs[0].set_title("Input Voice Wave")
@@ -89,10 +89,12 @@ class Changer():
             self.axs[i].set_ylabel("digital value[-]")
             self.lines[i].set_ydata([np.nan] * len(self.freq_x))
         return self.lines
-        
+
     def plotGraphs(self,count):
         self.plotInQ()
-#         self.plotInFreq()
+        self.plotOutQ()
+        self.plotInFreq()
+        self.plotOutFreq()
         return self.lines
 
 
@@ -103,17 +105,17 @@ class Changer():
         for i in range(self.WAVE_GRAPH_VAL_NUM):
             line[i] = self.inQ[(self.inQF + i)%self.Q_LEN]
         self.lines[0].set_ydata(line)
-        
+
     def plotOutQ(self):
-        self.lines[2].set_ydata([np.nan] * len(self.wave_x))
-        
+        self.lines[1].set_ydata([0] * len(self.wave_x))
+
     def plotInFreq(self):
-        #self.lines[1].set_ydata(self.inFreq)
-        self.lines[1].set_ydata([np.nan] * len(self.freq_x))
-        
+#         self.lines[1].set_ydata(self.inFreq)
+        self.lines[2].set_ydata([0] * len(self.freq_x))
+
     def plotOutFreq(self):
-        self.lines[3].set_ydata([np.nan] * len(self.freq_x))
-        
+        self.lines[3].set_ydata([0] * len(self.freq_x))
+
     def convertWave(self, convertData):
         #波(input)        →周波数特性(input)
         self.inFreq = np.fft.fft(convertData)
