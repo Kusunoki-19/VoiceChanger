@@ -28,7 +28,7 @@ class Changer():
     outQR = 2 * N
 
     #グラフに関する変数
-    WAVE_GRAPH_VAL_NUM = N
+    WAVE_GRAPH_VAL_NUM = Q_LEN
 
     fig = plt.figure()
     plt.subplots_adjust(wspace=0.6, hspace=1) # 余白を設定
@@ -37,18 +37,23 @@ class Changer():
     inFreq = np.fft.fft(np.zeros((N, 1)))
     outFreq = np.fft.fft(np.zeros((N, 1)))
     axs = [] #各グラフ
-    axs.append(fig.add_subplot(221 + 0)) #左上
-    axs.append(fig.add_subplot(221 + 2)) #左下
-    axs.append(fig.add_subplot(221 + 1)) #右上
-    axs.append(fig.add_subplot(221 + 3)) #右下
+    axs.append(fig.add_subplot(221 + 0)) #左上,波(input)
+    axs.append(fig.add_subplot(221 + 2)) #左下,波(output)
+    axs.append(fig.add_subplot(221 + 1)) #右上,周波数特性(input)
+    axs.append(fig.add_subplot(221 + 3)) #右下,周波数特性(output)
+    axs.append(fig.add_subplot(221 + 0)) #左上,inQ front 
+    axs.append(fig.add_subplot(221 + 2)) #左下,outQ Reqr
 
     lines = [] #各ラインオブジェクト
     for i in [0,1]:
         lines.append(
-            axs[i].plot(wave_x,[np.nan] * len(wave_x))[0])
+            axs[i].plot(wave_x,[np.nan] * len(wave_x),"blue")[0])
     for i in [2,3]:
         lines.append(
-            axs[i].plot(freq_x,[np.nan] * len(freq_x))[0])
+            axs[i].plot(freq_x,[np.nan] * len(freq_x),"blue")[0])
+    for i in [4,5]:
+        lines.append(
+            axs[i].plot([0,0],[-1,1],"red")[0])
 
     samplingCount = 0
 
@@ -89,6 +94,9 @@ class Changer():
             self.axs[i].set_xlabel("Freqency[rad/s]")
             self.axs[i].set_ylabel("digital value[-]")
             self.lines[i].set_ydata([np.nan] * len(self.freq_x))
+        #縦線グラフ共通設定
+        for i in [4,5]:
+            self.lines[i].set_data([0,0],[-1,1])
         return self.lines
 
     def plotGraphs(self,count):
@@ -99,16 +107,12 @@ class Changer():
 
     def plotWaves(self):
         """波(input),(output)をプロ ット"""
-        line1 = np.zeros((self.WAVE_GRAPH_VAL_NUM,1))
-        line = np.zeros((self.WAVE_GRAPH_VAL_NUM,1))
-        #波(input) inQF ~ inQF - WAVE_GRAPH_VAL_NUM　まで
-        for i in range(0, -self.WAVE_GRAPH_VAL_NUM,-1):
-            line1[i] = self.inQ[(self.inQF + i)%self.Q_LEN]
-        self.lines[0].set_ydata(line1)
-        #波(output) outQF ~ outQF + WAVE_GRAPH_VAL_NUM　まで
-        for i in range(0, -self.WAVE_GRAPH_VAL_NUM,-1):
-            line[i] = self.outQ[(self.outQR + i)%self.Q_LEN]
-        self.lines[1].set_ydata(line)
+        #波(input) inQ
+        self.lines[0].set_ydata(self.inQ)
+        self.lines[4].set_data([self.inQF,self.inQF], [-1,1])
+        #波(output) outQ
+        self.lines[1].set_ydata(self.outQ)
+        self.lines[5].set_data([self.outQR,self.outQR], [-1,1])
 
     def plotFreqs(self):
         """周波数特性(input),(output)をプロ ット"""
@@ -164,7 +168,7 @@ class Changer():
             outdata[i] = self.outQ[(self.outQR+i)%self.Q_LEN]
         self.outQR = (self.outQR +  sampleLen) % self.Q_LEN
 
-        print("sompling : %d"%(self.samplingCount))
+        print("sampling : %d"%(self.samplingCount))
 
 
 
