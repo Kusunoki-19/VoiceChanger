@@ -43,6 +43,8 @@ class Changer():
     axs.append(fig.add_subplot(221 + 3)) #右下,周波数特性(output)
     axs.append(fig.add_subplot(221 + 0)) #左上,inQ front 
     axs.append(fig.add_subplot(221 + 2)) #左下,outQ Reqr
+    axs.append(fig.add_subplot(221 + 0)) #左上,inQ convert領域
+    axs.append(fig.add_subplot(221 + 2)) #左下,outQ converted領域
 
     lines = [] #各ラインオブジェクト
     for i in [0,1]:
@@ -54,6 +56,9 @@ class Changer():
     for i in [4,5]:
         lines.append(
             axs[i].plot([0,0],[-1,1],"red")[0])
+    for i in [6,7]:
+        lines.append(
+            axs[i].plot([0,0,100,100,0],[-1,1,1,-1,-1],"green")[0])
 
     samplingCount = 0
 
@@ -78,8 +83,8 @@ class Changer():
         #個別グラフ設定
         self.axs[0].set_title("Input Voice Wave")
         self.axs[1].set_title("output Voice Wave")
-        self.axs[2].set_title("Input Freqency")
-        self.axs[3].set_title("output Freqency")
+        self.axs[2].set_title("Input Freqency Response")
+        self.axs[3].set_title("output Freqency Response")
         #波形グラフ共通設定
         for i in [0,1]:
             self.axs[i].set_ylim(-1,1)
@@ -97,6 +102,9 @@ class Changer():
         #縦線グラフ共通設定
         for i in [4,5]:
             self.lines[i].set_data([0,0],[-1,1])
+        #convert領域グラフ共通設定
+        for i in [6,7]:
+            self.lines[i].set_data([0,0,100,100,0],[-1,1,1,-1,-1])
         return self.lines
 
     def plotGraphs(self,count):
@@ -109,10 +117,12 @@ class Changer():
         """波(input),(output)をプロ ット"""
         #波(input) inQ
         self.lines[0].set_ydata(self.inQ)
-        self.lines[4].set_data([self.inQF,self.inQF], [-1,1])
+        self.lines[4].set_xdata([self.inQF,self.inQF])
+        self.lines[6].set_xdata([0,0,self.N,self.N,0] + ([self.inQR+1]*5))
         #波(output) outQ
         self.lines[1].set_ydata(self.outQ)
-        self.lines[5].set_data([self.outQR,self.outQR], [-1,1])
+        self.lines[5].set_xdata([self.outQR,self.outQR])
+        self.lines[7].set_xdata([0,0,self.N,self.N,0] + ([self.outQF]*5))
 
     def plotFreqs(self):
         """周波数特性(input),(output)をプロ ット"""
