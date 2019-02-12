@@ -10,7 +10,7 @@ class Changer():
     #サンプリング周波数[s^-1]
     F_s = 1 / T_s
     #fftごとのデータ数
-    N = 112*10
+    N = 112*3
     #fftを行う周期[s]
     T_fft = T_s * N
     #チャンネル数（1固定）
@@ -29,12 +29,11 @@ class Changer():
 
     #グラフに関する変数
     WAVE_GRAPH_VAL_NUM = 112
-    FREQ_RANGE = {'min':0, 'max':4000, 'range':4000}
 
     fig = plt.figure()
     plt.subplots_adjust(wspace=0.6, hspace=1) # 余白を設定
     wave_x = np.arange(0, WAVE_GRAPH_VAL_NUM , 1)
-    freq_x = np.arange(FREQ_RANGE['min'], FREQ_RANGE['max'], 1)
+    freq_x = np.fft.fftfreq(N, d=T_s)
     axs = [] #各グラフ
     axs.append(fig.add_subplot(221 + 0)) #左上
     axs.append(fig.add_subplot(221 + 2)) #左下
@@ -84,46 +83,43 @@ class Changer():
         #周波数特性グラフ共通設定
         for i in [2,3]:
             self.axs[i].set_ylim(-0.1,2)
-            self.axs[i].set_xlim(self.FREQ_RANGE['min'],self.FREQ_RANGE['max'])
+            self.axs[i].set_xlim(min(self.freq_x), max(self.freq_x))
             self.axs[i].set_xlabel("Freqency[rad/s]")
             self.axs[i].set_ylabel("digital value[-]")
             self.lines[i].set_ydata([np.nan] * len(self.freq_x))
         return self.lines
 
     def plotGraphs(self,count):
-        self.plotInQ()
-        self.plotOutQ()
-        self.plotInFreq()
-        self.plotOutFreq()
+        self.plotWaves()
+        self.plotFreqs()
         return self.lines
 
 
-    def plotInQ(self):
-        """ボイス波形を時間領域のグラフをプロ ット"""
+    def plotWaves(self):
+        """波(input),(output)をプロ ット"""
         line = np.zeros((self.WAVE_GRAPH_VAL_NUM,1))
         #inQから値の取り出し
         for i in range(self.WAVE_GRAPH_VAL_NUM):
             line[i] = self.inQ[(self.inQF + i)%self.Q_LEN]
         self.lines[0].set_ydata(line)
+        #outQから値の取り出し
+        for i in range(self.WAVE_GRAPH_VAL_NUM):
+            line[i] = self.outQ[(self.outQR + i)%self.Q_LEN]
+        self.lines[1].set_ydata(line)
 
-    def plotOutQ(self):
-        self.lines[1].set_ydata([0] * len(self.wave_x))
-
-    def plotInFreq(self):
-#         self.lines[1].set_ydata(self.inFreq)
-        self.lines[2].set_ydata([0] * len(self.freq_x))
-
-    def plotOutFreq(self):
-        self.lines[3].set_ydata([0] * len(self.freq_x))
+    def plotFreqs(self):
+        """周波数特性(input),(output)をプロ ット"""
+        self.lines[2].set_ydata(abs(self.inFreq))
+        self.lines[3].set_ydata(abs(self.outFreq))
 
     def convertWave(self, convertData):
         #波(input)        →周波数特性(input)
         self.inFreq = np.fft.fft(convertData)
-#         #周波数特性(input) →周波数特性(output) : filtering
-#         self.outFreq = self.inFreq
-#         #周波数特性(output)→波(output)
-#         convertedData = np.fft.ifft(self.outFreq)
-#         return convertedData
+        #周波数特性(input) →周波数特性(output) : filtering
+        self.outFreq = self.inFreq
+        #周波数特性(output)→波(output)
+        convertedData = np.fft.ifft(self.outFreq).real
+        return convertedData
 
     def audioCallback2(self):
         """T_fftごとに呼ばれるコールバック関数"""
@@ -136,11 +132,11 @@ class Changer():
         self.inQR = (self.inQR + self.N) % self.Q_LEN
         #データの変換
         convertedData = self.convertWave(convertData)
-#         #変換したデータを出力Qに追加
-#         for i, _ in enumerate(convertedData):
-#             self.outQ[(self.outQF+i)%self.Q_LEN]  = convertedData[i]
-#         #outQ Front の更新
-#         self.outQF = (self.outQF + len(convertedData)) % self.Q_LEN
+        #変換したデータを出力Qに追加
+        for i, _ in enumerate(convertedData):
+            self.outQ[(self.outQF+i)%self.Q_LEN]  = convertedData[i]
+        #outQ Front の更新
+        self.outQF = (self.outQF + len(convertedData)) % self.Q_LEN
 
     def audioCallback(self, indata, outdata, frames, time, status):
         """複数のサンプリングごと呼ばれるコールバック関数"""
@@ -152,7 +148,7 @@ class Changer():
         self.samplingCount += sampleLen
 
         #リングQに追加
-        for i, _ in enumerate(indata):
+        for i in range(sampleLen):
             self.inQ[(self.inQF + i)%self.Q_LEN] = indata[i]
         self.inQF = (self.inQF + sampleLen) % self.Q_LEN
         #T_fftのタイミング>=T_sが一定回数のタイミングで、audioCallback2を呼び出す
@@ -161,11 +157,11 @@ class Changer():
             threadConvert.start()
             self.samplingCount = self.samplingCount % self.N
         #リングQから取り出し
-        for i, _ in enumerate(indata):
-            outdata[i] = self.outQ[(self.outQF+i)%self.Q_LEN]
+        for i in range(sampleLen):
+            outdata[i] = self.outQ[(self.outQR+i)%self.Q_LEN]
         self.outQR = (self.outQR +  sampleLen) % self.Q_LEN
 
-        print(self.samplingCount)
+        print("sompling count : %d"%(self.samplingCount))
 
 
 
