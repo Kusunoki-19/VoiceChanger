@@ -1,5 +1,4 @@
 import threading
-import sys
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -29,11 +28,27 @@ class Changer():
     outQR = 0
 
     #グラフに関する変数
-    IN_Q_GRAPH_NUM = 112
-    fig , ax = plt.subplots(2,2,figsize=(10,5))
-    x = np.arange(0, IN_Q_GRAPH_NUM , 1)
-    lineInQ, = ax[0,0].plot(x, np.zeros((IN_Q_GRAPH_NUM,1)))
-
+    WAVE_GRAPH_VAL_NUM = 112
+    FREQ_RANGE = {'min':0, 'max':4000, 'range':4000}
+    
+    fig = plt.figure()
+    plt.subplots_adjust(wspace=0.6, hspace=1) # 余白を設定
+    wave_x = np.arange(0, WAVE_GRAPH_VAL_NUM , 1)
+    freq_x = np.arange(FREQ_RANGE['min'], FREQ_RANGE['max'], 1)
+    axs = [] #各グラフ
+    axs.append(fig.add_subplot(221 + 0)) #左上
+    axs.append(fig.add_subplot(221 + 2)) #左下
+    axs.append(fig.add_subplot(221 + 1)) #右上
+    axs.append(fig.add_subplot(221 + 3)) #右下
+         
+    lines = [] #各ラインオブジェクト
+    for i in [0,1]:
+        lines.append(
+            axs[i].plot(wave_x,[np.nan] * len(wave_x))[0])
+    for i in [2,3]:
+        lines.append(
+            axs[i].plot(freq_x,[np.nan] * len(freq_x))[0])
+    
     samplingCount = 0
 
     def __init__(self):
@@ -45,48 +60,68 @@ class Changer():
 
         self.aniInQ = FuncAnimation(
             self.fig,
-            self.plotInQ,
-            init_func=self.initInQGraph,
+            self.plotGraphs,
+            init_func=self.initGraphs,
             interval=self.T_s,
             blit=True)
 
         with self.stream:
             plt.show()
+        
+    def initGraphs(self):
+        #個別グラフ設定
+        self.axs[0].set_title("Input Voice Wave")
+        self.axs[1].set_title("output Voice Wave")
+        self.axs[2].set_title("Input Freqency")
+        self.axs[3].set_title("output Freqency")
+        #波形グラフ共通設定
+        for i in [0,1]:
+            self.axs[i].set_ylim(-1,1)
+            self.axs[i].set_xlim(0,self.WAVE_GRAPH_VAL_NUM)
+            self.axs[i].set_xlabel("data index[-]")
+            self.axs[i].set_ylabel("digital value[-]")
+            self.lines[i].set_ydata([np.nan] * len(self.wave_x))
+        #周波数特性グラフ共通設定
+        for i in [2,3]:
+            self.axs[i].set_ylim(-0.1,2)
+            self.axs[i].set_xlim(self.FREQ_RANGE['min'],self.FREQ_RANGE['max'])
+            self.axs[i].set_xlabel("Freqency[rad/s]")
+            self.axs[i].set_ylabel("digital value[-]")
+            self.lines[i].set_ydata([np.nan] * len(self.freq_x))
+        return self.lines
+        
+    def plotGraphs(self,count):
+        self.plotInQ()
+#         self.plotInFreq()
+        return self.lines
 
-    def initInQGraph(self):
-        self.ax[0,0].set_title("Input Voice Wave")
-        self.ax[0,0].set_ylim(-1,1)
-        self.ax[0,0].set_ylabel("digital value[-]")
-        self.ax[0,0].set_xlabel("data index[-]")
-        self.lineInQ.set_ydata([np.nan] * self.IN_Q_GRAPH_NUM)
-        return self.lineInQ,
 
-    def initInFreqGraph(self):
-        self.ax[0,1].set_title("Input Freqency ")
-        self.ax[0,1].set_ylim(-1,1)
-        self.ax[0,1].set_ylabel("digital value[-]")
-        self.ax[0,1].set_xlabel("Freqency[rad/s]")
-        self.ax[0,1].set_xscale("log")
-        self.lineInQ.set_ydata([np.nan] * self.IN_Q_GRAPH_NUM)
-        return self.lineInQ,
-
-    def plotInQ(self, count):
+    def plotInQ(self):
         """ボイス波形を時間領域のグラフをプロ ット"""
-        line = np.zeros((self.IN_Q_GRAPH_NUM,1))
+        line = np.zeros((self.WAVE_GRAPH_VAL_NUM,1))
         #inQから値の取り出し
-        for i in range(self.IN_Q_GRAPH_NUM):
+        for i in range(self.WAVE_GRAPH_VAL_NUM):
             line[i] = self.inQ[(self.inQF + i)%self.Q_LEN]
-        self.lineInQ.set_ydata(line)
-        return self.lineInQ,
-
+        self.lines[0].set_ydata(line)
+        
+    def plotOutQ(self):
+        self.lines[2].set_ydata([np.nan] * len(self.wave_x))
+        
+    def plotInFreq(self):
+        #self.lines[1].set_ydata(self.inFreq)
+        self.lines[1].set_ydata([np.nan] * len(self.freq_x))
+        
+    def plotOutFreq(self):
+        self.lines[3].set_ydata([np.nan] * len(self.freq_x))
+        
     def convertWave(self, convertData):
         #波(input)        →周波数特性(input)
         self.inFreq = np.fft.fft(convertData)
-        #周波数特性(input) →周波数特性(output) : filtering
-        self.outFreq = self.inFreq
-        #周波数特性(output)→波(output)
-        convertedData = np.fft.ifft(self.outFreq)
-        return convertedData
+#         #周波数特性(input) →周波数特性(output) : filtering
+#         self.outFreq = self.inFreq
+#         #周波数特性(output)→波(output)
+#         convertedData = np.fft.ifft(self.outFreq)
+#         return convertedData
 
     def audioCallback2(self):
         """T_fftごとに呼ばれるコールバック関数"""
@@ -99,11 +134,11 @@ class Changer():
         self.inQR = (self.inQR + self.N) % self.Q_LEN
         #データの変換
         convertedData = self.convertWave(convertData)
-        #変換したデータを出力Qに追加
-        for i, _ in enumerate(convertedData):
-            self.outQ[(self.outQF+i)%self.Q_LEN]  = convertedData[i]
-        #outQ Front の更新
-        self.outQF = (self.outQF + len(convertedData)) % self.Q_LEN
+#         #変換したデータを出力Qに追加
+#         for i, _ in enumerate(convertedData):
+#             self.outQ[(self.outQF+i)%self.Q_LEN]  = convertedData[i]
+#         #outQ Front の更新
+#         self.outQF = (self.outQF + len(convertedData)) % self.Q_LEN
 
     def audioCallback(self, indata, outdata, frames, time, status):
         """複数のサンプリングごと呼ばれるコールバック関数"""
