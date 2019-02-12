@@ -10,7 +10,7 @@ class Changer():
     #サンプリング周波数[s^-1]
     F_s = 1 / T_s
     #fftごとのデータ数
-    N = 144*2*(10**1)
+    N = 144*5*(10**1)
     #fftを行う周期[s]
     T_fft = T_s * N
     #チャンネル数（1固定）
@@ -22,13 +22,13 @@ class Changer():
     inQ = np.zeros((Q_LEN, 1))
     outQ = np.zeros((Q_LEN, 1))
     #各キューのfrontとrear -> F と R
-    inQF = 2 * N
-    inQR = 0
-    outQF = N
-    outQR = 0
+    inQF = 0
+    inQR = 2 * N
+    outQF = 0
+    outQR = 2 * N
 
     #グラフに関する変数
-    WAVE_GRAPH_VAL_NUM = 112
+    WAVE_GRAPH_VAL_NUM = N
 
     fig = plt.figure()
     plt.subplots_adjust(wspace=0.6, hspace=1) # 余白を設定
@@ -99,13 +99,14 @@ class Changer():
 
     def plotWaves(self):
         """波(input),(output)をプロ ット"""
+        line1 = np.zeros((self.WAVE_GRAPH_VAL_NUM,1))
         line = np.zeros((self.WAVE_GRAPH_VAL_NUM,1))
-        #inQから値の取り出し
-        for i in range(self.WAVE_GRAPH_VAL_NUM):
-            line[i] = self.inQ[(self.inQF + i)%self.Q_LEN]
-        self.lines[0].set_ydata(line)
-        #outQから値の取り出し
-        for i in range(self.WAVE_GRAPH_VAL_NUM):
+        #波(input) inQF ~ inQF - WAVE_GRAPH_VAL_NUM　まで
+        for i in range(0, -self.WAVE_GRAPH_VAL_NUM,-1):
+            line1[i] = self.inQ[(self.inQF + i)%self.Q_LEN]
+        self.lines[0].set_ydata(line1)
+        #波(output) outQF ~ outQF + WAVE_GRAPH_VAL_NUM　まで
+        for i in range(0, -self.WAVE_GRAPH_VAL_NUM,-1):
             line[i] = self.outQ[(self.outQR + i)%self.Q_LEN]
         self.lines[1].set_ydata(line)
 
