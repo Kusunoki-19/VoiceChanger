@@ -118,11 +118,15 @@ class Changer():
         #波(input) inQ
         self.lines[0].set_ydata(self.inQ)
         self.lines[4].set_xdata([self.inQF,self.inQF])
-        self.lines[6].set_xdata([0,0,self.N,self.N,0] + ([self.inQR+1]*5))
+        self.lines[6].set_xdata(
+            np.array([self.inQR+1]*5) + 
+            np.array([0,0,self.N,self.N,0]))
         #波(output) outQ
         self.lines[1].set_ydata(self.outQ)
         self.lines[5].set_xdata([self.outQR,self.outQR])
-        self.lines[7].set_xdata([0,0,self.N,self.N,0] + ([self.outQF]*5))
+        self.lines[7].set_xdata(
+            np.array([self.outQF]*5) + 
+            np.array([0,0,self.N,self.N,0]))
 
     def plotFreqs(self):
         """周波数特性(input),(output)をプロ ット"""
