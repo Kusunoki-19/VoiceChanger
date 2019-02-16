@@ -5,14 +5,18 @@ import numpy as np
 import sounddevice as sd
 
 class Changer():
+    #帯域制限周波数[s^-1] (この周波数以上はカットという周波数,本来はアナログフィルタでカット), 
+    #人間の可聴域は20kHzらしいが、処理が重くなったので現段階では2.5kHz
+    F_m = 4*(10**3)
+    #サンプリング周波数[s^-1],
+    #サンプリング定理よりT_s > 2 F_sのひつようがあるので、ぎりのサンプリング周波数(ナイキスト周波数)にする
+    F_s = 2 * F_m
+    #スペクトル周期[ras/s], 周波数特性の周期
+    #OMEGA_s = 2 * PI * F_s
     #サンプリング周期[s]
-    T_s = 1.0/5000
-    #サンプリング周波数[s^-1]
-    F_s = 1 / T_s
-    #fftごとのデータ数
-    N = 144*5*(10**1)
-    #fftを行う周期[s]
-    T_fft = T_s * N
+    T_s = 1 / F_s
+    #fftごとのデータ数, 現在は2.5kHzの時のindata長になってる(適当)
+    N = 144*1*(10**2)
     #チャンネル数（1固定）
     CHANNEL = 1
 
@@ -41,7 +45,7 @@ class Changer():
     axs.append(fig.add_subplot(221 + 2)) #左下,波(output)
     axs.append(fig.add_subplot(221 + 1)) #右上,周波数特性(input)
     axs.append(fig.add_subplot(221 + 3)) #右下,周波数特性(output)
-    axs.append(fig.add_subplot(221 + 0)) #左上,inQ front 
+    axs.append(fig.add_subplot(221 + 0)) #左上,inQ front
     axs.append(fig.add_subplot(221 + 2)) #左下,outQ Reqr
     axs.append(fig.add_subplot(221 + 0)) #左上,inQ convert領域
     axs.append(fig.add_subplot(221 + 2)) #左下,outQ converted領域
@@ -119,25 +123,43 @@ class Changer():
         self.lines[0].set_ydata(self.inQ)
         self.lines[4].set_xdata([self.inQF,self.inQF])
         self.lines[6].set_xdata(
-            np.array([self.inQR+1]*5) + 
+            np.array([self.inQR+1]*5) +
             np.array([0,0,self.N,self.N,0]))
         #波(output) outQ
         self.lines[1].set_ydata(self.outQ)
         self.lines[5].set_xdata([self.outQR,self.outQR])
         self.lines[7].set_xdata(
-            np.array([self.outQF]*5) + 
+            np.array([self.outQF]*5) +
             np.array([0,0,self.N,self.N,0]))
 
     def plotFreqs(self):
         """周波数特性(input),(output)をプロ ット"""
         self.lines[2].set_ydata(abs(self.inFreq))
         self.lines[3].set_ydata(abs(self.outFreq))
+        
+    def inqueue(self, q, start, data):
+        dataLen = len(data)
+        qLen = len(q)
+        for i in range(dataLen):
+            index = (start + i) % qLen
+            q[index] = data[i]
+        start = index
+        
+    def dequeue(self, q, start, dataLen):
+        data = []
+        qLen = len(q)
+        for i in range(dataLen):
+            index = (start + i) % qLen
+            data.append(q[index])
+        start = index
+        return data
+        
 
     def convertWave(self, convertData):
         #波(input)        →周波数特性(input)
         self.inFreq = np.fft.fft(convertData)
         #周波数特性(input) →周波数特性(output) : filtering
-        self.outFreq = self.inFreq
+        self.outFreq = self.inFreq * 50
         #周波数特性(output)→波(output)
         convertedData = np.fft.ifft(self.outFreq).real
         return convertedData
