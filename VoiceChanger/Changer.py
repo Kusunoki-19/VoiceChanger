@@ -8,7 +8,7 @@ from DataStructures import NumpyRingBaffer
 class Changer():
     #帯域制限周波数[s^-1] (この周波数以上はカットという周波数,本来はアナログフィルタでカット),
     #人間の可聴域は20kHzらしいが、処理が重くなったので現段階では2.5kHz
-    F_m = 4*1000
+    F_m = 3.5*1000
     #サンプリング周波数[s^-1],
     #サンプリング定理よりT_s > 2 F_sのひつようがあるので、ぎりのサンプリング周波数(ナイキスト周波数)にする
     F_s = 2 * F_m
@@ -32,20 +32,20 @@ class Changer():
     #グラフに関する変数
     WAVE_GRAPH_VAL_NUM = waveIn.length
     fig = plt.figure(figsize=(10,6))
-    plt.subplots_adjust(wspace=0.6, hspace=3) # 余白を設定
+    plt.subplots_adjust(wspace=0.6, hspace=0.4) # 余白を設定
     waveX = np.arange(0, WAVE_GRAPH_VAL_NUM , 1)
     freqX = np.fft.fftfreq(N, d=T_s)
     freqIn = np.fft.fft(np.zeros((N, 1)))
     freqOut = np.fft.fft(np.zeros((N, 1)))
     axs = [] #各グラフ
-    axs.append(fig.add_subplot(411 + 0)) #波(input)
-    axs.append(fig.add_subplot(411 + 3)) #波(output)
-    axs.append(fig.add_subplot(411 + 1)) #周波数特性(input)
-    axs.append(fig.add_subplot(411 + 2)) #周波数特性(output)
-    axs.append(fig.add_subplot(411 + 0)) #inQ front
-    axs.append(fig.add_subplot(411 + 3)) #outQ Reqr
-    axs.append(fig.add_subplot(411 + 0)) #inQ convert領域
-    axs.append(fig.add_subplot(411 + 3)) #outQ converted領域
+    axs.append(fig.add_subplot(221 + 0)) #波(input)
+    axs.append(fig.add_subplot(221 + 2)) #波(output)
+    axs.append(fig.add_subplot(221 + 1)) #周波数特性(input)
+    axs.append(fig.add_subplot(221 + 3)) #周波数特性(output)
+    axs.append(fig.add_subplot(221 + 0)) #inQ front
+    axs.append(fig.add_subplot(221 + 2)) #outQ Reqr
+    axs.append(fig.add_subplot(221 + 0)) #inQ convert領域
+    axs.append(fig.add_subplot(221 + 2)) #outQ converted領域
 
     lines = [] #各ラインオブジェクト
     for i in [0,1]:#波形
@@ -93,27 +93,26 @@ class Changer():
             self.axs[i].set_ylabel("digital value[-]")
         #周波数特性グラフ共通設定
         for i in [2,3]:
-            self.axs[i].set_ylim(-0.1,2)
+            self.axs[i].set_ylim(-0.1,0.25)
             self.axs[i].set_xlim(0, max(self.freqX))
             self.axs[i].set_xlabel("Freqency[rad/s]")
-            self.axs[i].set_ylabel("digital value[-]")
+            self.axs[i].set_ylabel("Amplipude[-]")
         return self.lines
 
     def plotGraphs(self,count):
-#         #波(input) inQ
-#         self.lines[0].set_ydata(self.waveIn.q)
-#         self.lines[4].set_xdata([self.waveIn.rear]*2)
-#         self.lines[6].set_xdata([self.waveIn.front]*2)
-# 
-#         #波(output) outQ
-#         self.lines[1].set_ydata(self.waveOut.q)
-#         self.lines[5].set_xdata([self.waveOut.front]*2)
-#         self.lines[7].set_xdata([self.waveOut.rear]*2)
+        #波(input) inQ
+        self.lines[0].set_ydata(self.waveIn.q)
+        self.lines[4].set_xdata([self.waveIn.rear]*2)
+        self.lines[6].set_xdata([self.waveIn.front]*2)
 
-#         #周波数特性(input),(output)をプロ ット
-#         self.lines[2].set_ydata(np.abs(self.freqIn[0:int(self.N/2)]))
-#         self.lines[3].set_ydata(np.abs(self.freqOut[0:int(self.N/2)]))
+        #波(output) outQ
+        self.lines[1].set_ydata(self.waveOut.q)
+        self.lines[5].set_xdata([self.waveOut.front]*2)
+        self.lines[7].set_xdata([self.waveOut.rear]*2)
 
+        #周波数特性(input),(output)をプロ ット
+        self.lines[2].set_ydata(np.abs(self.freqIn[0:int(self.N/2)]))
+        self.lines[3].set_ydata(np.abs(self.freqOut[0:int(self.N/2)]))
         return self.lines
 
 
@@ -121,7 +120,11 @@ class Changer():
         #波(input)        →周波数特性(input)
         self.freqIn = np.fft.fft(convertData)
         #周波数特性(input) →周波数特性(output) : filtering
-        self.freqOut = self.freqIn * 50
+        self.freqOut = self.freqIn.copy()
+        self.freqIn = self.freqIn * 10
+#         self.freqOut[((self.freqX < 0)&(self.freqX > self.F_m))] = 0 + 0j
+        self.freqOut[((self.freqX < 0)&(self.freqX > 100))] = 0 + 0j
+        self.freqOut = self.freqOut * 10
         #周波数特性(output)→波(output)
         convertedData = np.fft.ifft(self.freqOut).real
         return convertedData
@@ -142,17 +145,15 @@ class Changer():
         outdata : 出力に使う行ベクトル, indata と同じ長さと思われる
         """
         self.samplingCount += indata.shape[0]
-
         #リングQに追加
         self.waveIn.enque(indata)
+        #リングQから取り出し
+        outdata[:] = self.waveOut.deque(indata.shape[0])
         #T_fftのタイミング>=T_sが一定回数のタイミングで、audioCallback2を呼び出す
         if self.samplingCount >= self.N:
-#             print("callback by a convertion")
             threadConvert = threading.Thread(target=self.audioCallback2)
             threadConvert.start()
             self.samplingCount = self.samplingCount % self.N
-        #リングQから取り出し
-        outdata[:] = self.waveOut.deque(indata.shape[0])
 
 #         print("sampling : %d"%(self.samplingCount))
 #         print(outdata.reshape((1,208)))
