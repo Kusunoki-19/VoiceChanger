@@ -121,7 +121,6 @@ class Changer():
         self.freqIn = np.fft.fft(convertData)
         #周波数特性(input) →周波数特性(output) : filtering
         self.freqOut = self.freqIn.copy()
-        self.freqIn = self.freqIn * 10
 #         self.freqOut[((self.freqX < 0)&(self.freqX > self.F_m))] = 0 + 0j
         self.freqOut[((self.freqX < 0)&(self.freqX > 100))] = 0 + 0j
         self.freqOut = self.freqOut * 10
